@@ -1,0 +1,67 @@
+services:
+  # Infrastructure SGBD - Une base logique isolée par microservice métier
+  postgres:
+    image: postgres:16-alpine
+    container_name: audit-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - "${POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Broker de messages asynchrone pour la publication des constats d'audit
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: audit-rabbitmq
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"    # Port AMQP standard
+      - "15672:15672"  # Console de gestion web RabbitMQ
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Cache Redis pour le Rate Limiting réactif de l'API Gateway (Jalon V6)
+  redis:
+    image: redis:7-alpine
+    container_name: audit-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Serveur SMTP de simulation et interface Web de visualisation des emails (Jalon V5)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: audit-mailhog
+    restart: always
+    ports:
+      - "1025:1025"  # Port SMTP
+      - "8025:8025"  # Interface Web MailHog pour vérification humaine / démo
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8025/api/v2/messages"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_data:
+

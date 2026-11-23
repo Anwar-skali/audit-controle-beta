@@ -1,0 +1,75 @@
+--- PAGE 1 ---
+ 
+ 
+ 
+ 
+ 
+Grille d'Évaluation de Projet – Contrôle  
+(1ère Évaluation) 
+ 
+ 
+Ce contrôle est évalué sur 10 points, répartis à raison de 1 point par élément d'évaluation (10 éléments au total). Les états de 
+réalisation de chaque élément sont appréciés selon le barème suivant : 1 point : Réalisé (conforme et fonctionnel) ; 0,5 point : 
+Réalisation partielle ou incomplète ; 0 point : Non réalisé 
+Phase 
+Jalon 
+Livrable attendu 
+V0 
+Conception & 
+Documentation 
+d'Architecture 
+Schéma d'architecture globale, diagramme de classes par microservice 
+explicitant la gestion des références distantes, et fichier Readme.md 
+exhaustif (prérequis, schéma, instructions). 
+V1 
+Implémentation 
+Métier & Modèle 
+de Données 
+Architecture en couches respectée (Entity-Repo-Service-Controller), 
+isolation stricte des bases de données (Database per Service) et 
+validation/mapping DTO des requêtes entrantes. 
+Opérations CRUD autonomes fully opérationnelles, validées exclusivement 
+au moyen d'une collection Postman structurée et pré-enregistrée 
+(scénarios de test sauvegardés). 
+V2 
+&  
+V3 
+Mise en place des 
+services de base 
+Service Discovery :  Enregistrement dynamique et effectif de toutes les 
+instances applicatives dans Eureka Server avec nommage cohérent et 
+statut (UP). 
+Gateway & routage : Routage dynamique via l'API Gateway ou statique 
+avec équilibrage de charge (Load Balancing).  Validés par des requêtes 
+Postman pré-enregistrées 
+Config Server : Configurations externalisées et effectivement chargées 
+depuis le Config Server ; fichiers et noms cohérents avec les services 
+V4 
+Communication 
+Synchrone 
+(OpenFeign) 
+Clients OpenFeign fortement typés avec DTOs dédiés, intégrant la 
+validation préalable des références distantes et la cohérence lors des 
+opérations de création interservices. 
+Agrégation & Consultation Enrichie : Endpoints de consultation retournant 
+un DTO composé (données agrégées depuis d'autres services via Feign), 
+validés par des requêtes Postman pré-enregistrées 
+V5 
+Asynchrone (Broker 
+/ Notification) 
+Broker de messages (RabbitMQ/Kafka) et service de notification 
+opérationnels : implémentation conforme des composants Publisher et 
+Consumer. 
+Démonstration du cycle complet : déclenchement de l'événement métier, 
+passage dans le broker, consommation et confirmation de la 
+réception/envoi du mail de notification. 
+V6 
+Résilience, gestion 
+d’erreurs et 
+Idempotence 
+- Intégration de Circuit Breaker & Retry sur au moins 2 appels Feign,  
+- RateLimiting configuré sur la Gateway 
+- gestion centralisée des erreurs (ControllerAdvice)  
+- idempotence des créations. 
+
+

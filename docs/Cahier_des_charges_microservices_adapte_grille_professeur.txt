@@ -1,0 +1,270 @@
+--- PAGE 1 ---
+Plateforme de Contrôle Continu et d’Analyse d’Audit — Cahier des charges adapté
+Page 1
+CAHIER DES CHARGES
+Plateforme de Contrôle Continu et d’Analyse d’Audit
+Microservices Java · Spring Boot · Spring Cloud
+Version adaptée à la grille d’évaluation du professeur — première évaluation
+Auteur : [Nom et prénom]    Encadrant : [Nom du professeur]    Date : 2 novembre 2026
+1. Objet et périmètre du projet
+Le projet consiste à développer une plateforme de contrôle interne permettant de gérer les fournisseurs, les transactions
+fournisseurs et les constats d’audit associés. Lorsqu’un constat est créé, un événement métier est publié puis consommé
+par un service de notification chargé d’envoyer un email de test. L’application est construite avec une architecture
+microservices basée sur Java, Spring Boot et Spring Cloud.
+Priorité : satisfaire et démontrer les exigences de la grille officielle, jalon par jalon. Les fonctionnalités avancées d’analyse
+d’anomalies sont reportées après validation du socle évalué.
+2. Objectifs mesurables
+• Documenter l’architecture globale, les classes de chaque service et les références entre services.
+• Fournir des CRUD autonomes, avec DTO, validation des entrées et base de données isolée par service métier.
+• Enregistrer les instances dans Eureka et faire passer les requêtes par la Gateway.
+• Externaliser les configurations dans Config Server et prouver qu’elles sont effectivement chargées.
+• Vérifier les références distantes par OpenFeign et exposer des consultations enrichies.
+• Démontrer le cycle complet d’un événement RabbitMQ jusqu’à l’email visible dans MailHog.
+• Démontrer les mécanismes de résilience, de limitation de débit, de gestion d’erreurs et d’idempotence prévus au jalon
+V6.
+• Livrer une collection Postman versionnée qui permet de rejouer les scénarios et leurs cas d’erreur.
+3. Architecture cible
+Composant
+Port indicatif
+Responsabilité
+Données
+config-server
+8888
+Configurations externalisées
+Aucune
+eureka-server
+8761
+Registre et découverte des services
+Aucune
+api-gateway
+8080
+Point d’entrée, routage et rate limiting
+Aucune
+supplier-service
+8081
+CRUD fournisseurs
+supplier_db
+transaction-service
+8082
+CRUD transactions et validation du fournisseur
+transaction_db
+finding-service
+8083
+CRUD constats et publication d’événement
+finding_db
+notification-service
+8084
+Consommation d’événements et emails
+Aucune requise
+RabbitMQ
+5672
+Transport des événements asynchrones
+Broker
+
+
+--- PAGE 2 ---
+Plateforme de Contrôle Continu et d’Analyse d’Audit — Cahier des charges adapté
+Page 2
+Composant
+Port indicatif
+Responsabilité
+Données
+MailHog
+8025 UI
+Visualisation des emails de test
+Boîte de test
+Règle d’isolation : chaque microservice métier possède et manipule uniquement sa propre base. Les identifiants distants
+sont stockés comme références simples ; aucune clé étrangère ni lecture directe dans la base d’un autre service n’est
+autorisée.
+4. Modèle métier minimal
+Service
+Entité
+Attributs principaux
+Règles importantes
+supplier-service
+Supplier
+id, name, taxId, country, bankAccount, status,
+createdAt
+taxId requis et unique ;
+validation des champs
+transaction-service
+Transaction
+id, reference, supplierId, amount, currency, type,
+transactionDate, createdBy, status
+reference unique ; montant
+valide ; supplierId vérifié par
+Feign
+finding-service
+Finding
+id, transactionId, controlCode, severity,
+description, status, createdAt
+transactionId vérifié par
+Feign ; événement publié à
+la création
+Tous les services suivent les couches Entity, Repository, Service et Controller. Les échanges API utilisent des DTO de
+requête/réponse validés ; MapStruct est retenu pour le mapping.
+
+
+--- PAGE 3 ---
+Plateforme de Contrôle Continu et d’Analyse d’Audit — Cahier des charges adapté
+Page 3
+5. Exigences et critères d’acceptation par jalon
+V0 — Conception et documentation
+• Un schéma global représente les services, les bases, Eureka, Config Server, Gateway, RabbitMQ et les flux
+synchrones/asynchrones.
+• Un diagramme de classes est fourni pour chaque microservice métier et explicite les références distantes (supplierId,
+transactionId).
+• README.md contient les prérequis, ports, variables, ordre de démarrage, commandes, endpoints et instructions
+Postman.
+• Acceptation : une personne extérieure peut lancer le socle en suivant le README.
+V1 — Modèle métier et CRUD
+• Les trois services métier disposent des opérations Create, Read, Update et Delete, plus consultation de liste et par
+identifiant.
+• Chaque service utilise sa propre base et ne consulte jamais directement la base d’un autre service.
+• Les entrées sont validées avec Bean Validation ; les API exposent des DTO et un mapping dédié.
+• Une collection Postman exportée contient les scénarios CRUD, les variables et des assertions de réponse.
+V2 — Eureka Service Discovery
+• Chaque instance s’enregistre auprès d’Eureka avec un spring.application.name cohérent.
+• Le tableau de bord montre toutes les instances attendues avec le statut UP.
+• Preuve : capture du dashboard et vérification des noms/états au moment de la démonstration.
+V3 — Gateway et Config Server
+• Les routes de la Gateway utilisent la découverte dynamique (lb://...) ou un routage statique avec équilibrage démontré,
+selon la grille.
+• Le load balancing est prouvé en lançant deux instances de supplier-service sur des ports différents.
+• Les propriétés applicatives sont externalisées dans un dépôt de configuration ; chaque service charge le fichier
+correspondant à son nom.
+• Preuve : appels Postman via la Gateway, preuve des deux instances et endpoint du Config Server.
+V4 — Communication synchrone OpenFeign
+• transaction-service vérifie l’existence du fournisseur avant création ou modification d’une transaction.
+• finding-service vérifie l’existence de la transaction avant création ou modification d’un constat.
+• GET /transactions/{id}/details renvoie les données de transaction enrichies avec le fournisseur.
+• GET /findings/{id}/details renvoie le constat, la transaction et le fournisseur dans un DTO composé.
+• Les cas de référence inexistante renvoient une erreur explicite 404 ou 400 et sont testés avec Postman.
+V5 — Broker et notification
+• RabbitMQ comporte un exchange, une queue et un binding configurés et documentés.
+• La création d’un constat publie FindingCreated avec findingId, transactionId, supplierName, severity, description et
+createdAt.
+• notification-service consomme l’événement et envoie un email via SMTP de test MailHog.
+• Acceptation : la démonstration montre la requête Postman, le message reçu par RabbitMQ, sa consommation et l’email
+dans MailHog.
+
+
+--- PAGE 4 ---
+Plateforme de Contrôle Continu et d’Analyse d’Audit — Cahier des charges adapté
+Page 4
+V6 — Résilience, erreurs et idempotence
+• Resilience4j Circuit Breaker et Retry sont appliqués à au moins deux appels Feign : transaction→supplier et
+finding→transaction.
+• Le rate limiting de la Gateway est configuré et un scénario Postman démontre une réponse 429.
+• ControllerAdvice renvoie un format d’erreur homogène avec code, message, horodatage et chemin.
+• Les créations sont idempotentes via Idempotency-Key ou une référence métier unique : une répétition ne crée pas de
+doublon.
+• Ce jalon est prévu dans le cahier des charges ; son poids exact dans la première note doit être confirmé auprès du
+professeur.
+6. Contrats d’API minimaux
+Service
+Endpoints principaux
+Résultat attendu
+Supplier
+POST/GET/PUT/DELETE /suppliers ; GET /suppliers/{id}
+CRUD fournisseurs
+Transaction
+POST/GET/PUT/DELETE /transactions ; GET
+/transactions/{id}
+CRUD + validation du supplierId par Feign
+Transaction
+GET /transactions/{id}/details
+Transaction et fournisseur agrégés
+Finding
+POST/GET/PUT/DELETE /findings ; GET /findings/{id}
+CRUD + validation du transactionId et
+publication d’événement
+Finding
+GET /findings/{id}/details
+Constat, transaction et fournisseur
+agrégés
+Les routes métier sont exposées à travers la Gateway sous les préfixes /api/suppliers, /api/transactions et /api/findings.
+Les chemins exacts peuvent être ajustés au code, à condition de rester cohérents dans le README et la collection
+Postman.
+
+
+--- PAGE 5 ---
+Plateforme de Contrôle Continu et d’Analyse d’Audit — Cahier des charges adapté
+Page 5
+7. Stack technique et exécution
+• Langage et framework : Java 21, Spring Boot 3, Spring Data JPA, Bean Validation, MapStruct.
+• Spring Cloud : Eureka Server, Config Server, Spring Cloud Gateway, OpenFeign, Resilience4j.
+• Messagerie : RabbitMQ avec Spring AMQP.
+• Bases : PostgreSQL, une base par service métier ; H2 peut être utilisé pour les tests.
+• Rate limiting : Gateway RequestRateLimiter avec Redis.
+• Email : Spring Mail et MailHog pour une démonstration locale sans envoi à de vrais destinataires.
+• Qualité : Postman, JUnit 5 et Mockito.
+• Infrastructure : Docker Compose pour les dépendances locales, selon les capacités de la machine.
+8. Collection Postman : structure obligatoire
+• V1-CRUD : scénarios positifs et négatifs pour chaque service métier.
+• V2-Eureka : vérification manuelle documentée du statut UP de toutes les instances.
+• V3-Gateway-Config : appels via Gateway, test de deux instances et vérification de la configuration chargée.
+• V4-Feign : création avec référence valide, référence inexistante et endpoints /details.
+• V5-Async : création d’un constat, puis vérification de l’événement et de l’email dans RabbitMQ/MailHog.
+• V6-Resilience : service distant indisponible, retry/circuit breaker, réponse 429 et double soumission idempotente.
+La collection utilise des variables d’environnement (baseUrl, IDs créés) et des tests automatiques sur les statuts HTTP et
+les champs essentiels. Elle doit être exportée et versionnée avec le code.
+9. Livrables à remettre
+• Code source versionné avec un dossier par service et un dépôt de configuration identifiable.
+• Schéma d’architecture global et diagrammes de classes par microservice.
+• README complet : installation, prérequis, ports, configuration, ordre de démarrage, appels de test et dépannage.
+• Collection Postman exportée avec variables et scénarios de test.
+• Fichier Docker Compose pour les composants d’infrastructure pris en charge.
+• Scénario de démonstration reproductible ; captures d’écran des preuves clés et vidéo de secours si nécessaire.
+10. Ordre de réalisation recommandé
+Ordre
+Jalon
+Travail prioritaire
+Preuve de fin
+1
+V0
+Architecture, diagrammes, README initial
+Documents validés et dépôt structuré
+2
+V1
+Trois CRUD, DTO, validation, bases séparées
+Collection Postman CRUD réussie
+3
+V2/V3
+Eureka, Config Server, Gateway, équilibrage
+Instances UP et requêtes routées
+4
+V4
+Feign, vérifications, DTO enrichis
+Scénarios valides et invalides
+5
+V5
+RabbitMQ, consumer, notification email
+Email visible dans MailHog
+6
+V6
+Résilience, rate limit, erreurs, idempotence
+Tests de panne et doublon réussis
+7
+Finalisation
+README final, répétition et captures
+Démo exécutable de bout en bout
+11. Fonctionnalités hors périmètre obligatoire
+
+
+--- PAGE 6 ---
+Plateforme de Contrôle Continu et d’Analyse d’Audit — Cahier des charges adapté
+Page 6
+Les fonctionnalités suivantes ne doivent être commencées qu’après validation du socle demandé par la grille : moteur de
+contrôles d’audit configurable, détection statistique/ML d’anomalies, scoring de risque, migration vers Kafka, Outbox/Saga,
+Keycloak, observabilité avancée, journal immuable, reporting PDF et tableaux de bord avancés. Elles constituent une
+phase d’amélioration et ne remplacent aucun critère obligatoire.
+12. Points à confirmer avec le professeur
+• Confirmer si les quatre éléments V6 sont notés lors de la première évaluation ou s’ils constituent un jalon ultérieur.
+• Confirmer si RabbitMQ ou Kafka est préféré ; la grille autorise les deux, le présent cahier des charges retient RabbitMQ.
+• Confirmer la convention de rendu attendue pour les diagrammes (UML/PlantUML/draw.io) et les captures de preuve.
+Principe de validation : chaque exigence est considérée comme terminée uniquement lorsque le code fonctionne et que
+sa preuve peut être rejouée ou montrée au professeur. Une fonctionnalité seulement déclarée dans le README ne
+constitue pas une validation.
+
+

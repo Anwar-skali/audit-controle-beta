@@ -1,0 +1,410 @@
+{
+  "info": {
+    "name": "Audit Platform — Complete (V0 à V6)",
+    "_postman_id": "audit-platform-complete-collection",
+    "description": "Suite de tests complète pour la Plateforme de Contrôle Continu et d'Analyse d'Audit couvrant l'ensemble de la grille d'évaluation (V0 à V6).\n\nServices :\n- Gateway : http://localhost:8080\n- Config Server : http://localhost:8888\n- Eureka Server : http://localhost:8761\n- Supplier Service : http://localhost:8081\n- Transaction Service : http://localhost:8082\n- Finding Service : http://localhost:8083\n- Notification Service : http://localhost:8084\n\nVariables d'environnement dynamiques : gatewayUrl, supplierId, transactionId, findingId.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "V2 — Service Discovery (Eureka)",
+      "item": [
+        {
+          "name": "01 — Check Eureka Applications Registry",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Registry contains all active microservices', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.applications).to.not.be.undefined;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrlEureka}}/eureka/apps", "host": ["{{baseUrlEureka}}"], "path": ["eureka", "apps"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "V3 — Config Server & Gateway",
+      "item": [
+        {
+          "name": "01 — Config Server: Fetch supplier-service config",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Contains propertySources for supplier-service', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.name).to.eql('supplier-service');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrlConfig}}/supplier-service/default", "host": ["{{baseUrlConfig}}"], "path": ["supplier-service", "default"] }
+          }
+        },
+        {
+          "name": "02 — Gateway Route: Get Suppliers via Gateway",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is an array', function () {",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{gatewayUrl}}/api/suppliers", "host": ["{{gatewayUrl}}"], "path": ["api", "suppliers"] }
+          }
+        },
+        {
+          "name": "03 — Gateway Route: Get Transactions via Gateway",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{gatewayUrl}}/api/transactions", "host": ["{{gatewayUrl}}"], "path": ["api", "transactions"] }
+          }
+        },
+        {
+          "name": "04 — Gateway Route: Get Findings via Gateway",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{gatewayUrl}}/api/findings", "host": ["{{gatewayUrl}}"], "path": ["api", "findings"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "V4 — OpenFeign & Consultation Enrichie",
+      "item": [
+        {
+          "name": "01 — Create Supplier (Seed)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.environment.set('supplierId', json.id);",
+                  "pm.test('supplierId stored: ' + json.id, function () {",
+                  "    pm.expect(json.id).to.not.be.undefined;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cabinet Audit Expert\",\n  \"taxId\": \"TAX-FEIGN-{{$timestamp}}\",\n  \"country\": \"Maroc\",\n  \"bankAccount\": \"MA64-0001-0000-8888-9999-0000\"\n}"
+            },
+            "url": { "raw": "{{baseUrlSupplier}}/api/suppliers", "host": ["{{baseUrlSupplier}}"], "path": ["api", "suppliers"] }
+          }
+        },
+        {
+          "name": "02 — Create Transaction with Feign Validation (Valid)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.environment.set('transactionId', json.id);",
+                  "pm.test('transactionId stored: ' + json.id, function () {",
+                  "    pm.expect(json.id).to.not.be.undefined;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reference\": \"TX-FEIGN-{{$timestamp}}\",\n  \"supplierId\": {{supplierId}},\n  \"amount\": 35000.00,\n  \"currency\": \"MAD\",\n  \"type\": \"PAYMENT\",\n  \"createdBy\": \"senior_auditor\"\n}"
+            },
+            "url": { "raw": "{{baseUrlTransaction}}/api/transactions", "host": ["{{baseUrlTransaction}}"], "path": ["api", "transactions"] }
+          }
+        },
+        {
+          "name": "03 — Create Transaction with Invalid Supplier (Feign 404 Check)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test('Rejection message mentions supplier not found', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.message).to.include('Supplier not found');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reference\": \"TX-INVALID-SUPP-{{$timestamp}}\",\n  \"supplierId\": 99999999,\n  \"amount\": 1000.00,\n  \"currency\": \"MAD\",\n  \"type\": \"PAYMENT\",\n  \"createdBy\": \"senior_auditor\"\n}"
+            },
+            "url": { "raw": "{{baseUrlTransaction}}/api/transactions", "host": ["{{baseUrlTransaction}}"], "path": ["api", "transactions"] }
+          }
+        },
+        {
+          "name": "04 — Enriched Consultation: Transaction Details + Supplier DTO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains embedded Supplier object', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('supplier');",
+                  "    pm.expect(json.supplier.id).to.eql(parseInt(pm.environment.get('supplierId')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrlTransaction}}/api/transactions/{{transactionId}}/details", "host": ["{{baseUrlTransaction}}"], "path": ["api", "transactions", "{{transactionId}}", "details"] }
+          }
+        },
+        {
+          "name": "05 — Create Finding with Feign Validation (Valid & Triggers V5 RabbitMQ)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.environment.set('findingId', json.id);",
+                  "pm.test('findingId stored: ' + json.id, function () {",
+                  "    pm.expect(json.id).to.not.be.undefined;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactionId\": {{transactionId}},\n  \"controlCode\": \"CTRL_LIMIT_EXCEEDED\",\n  \"severity\": \"CRITICAL\",\n  \"description\": \"Dépassement critique du seuil d'engagement\"\n}"
+            },
+            "url": { "raw": "{{baseUrlFinding}}/api/findings", "host": ["{{baseUrlFinding}}"], "path": ["api", "findings"] }
+          }
+        },
+        {
+          "name": "06 — Enriched Consultation: Finding Details + Transaction DTO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains embedded Transaction object', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('transaction');",
+                  "    pm.expect(json.transaction.id).to.eql(parseInt(pm.environment.get('transactionId')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrlFinding}}/api/findings/{{findingId}}/details", "host": ["{{baseUrlFinding}}"], "path": ["api", "findings", "{{findingId}}", "details"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "V5 — Broker RabbitMQ & Notifications",
+      "item": [
+        {
+          "name": "01 — Get All Notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Notifications array exists', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrlNotification}}/api/notifications", "host": ["{{baseUrlNotification}}"], "path": ["api", "notifications"] }
+          }
+        },
+        {
+          "name": "02 — Get Notifications for specific finding",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrlNotification}}/api/notifications?findingId={{findingId}}", "host": ["{{baseUrlNotification}}"], "path": ["api", "notifications"], "query": [{ "key": "findingId", "value": "{{findingId}}" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "V6 — Résilience & Idempotence",
+      "item": [
+        {
+          "name": "01 — Duplicate Transaction Idempotence Check (409 Conflict)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 409 Conflict', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test('Message indicates duplicate resource', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.message).to.include('already exists');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reference\": \"TX-DUPLICATE-CHECK\",\n  \"supplierId\": {{supplierId}},\n  \"amount\": 100.00,\n  \"currency\": \"MAD\",\n  \"type\": \"PAYMENT\",\n  \"createdBy\": \"auditor\"\n}"
+            },
+            "url": { "raw": "{{baseUrlTransaction}}/api/transactions", "host": ["{{baseUrlTransaction}}"], "path": ["api", "transactions"] }
+          }
+        },
+        {
+          "name": "02 — Check Resilience4j Circuit Breaker Actuator",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrlTransaction}}/actuator/health", "host": ["{{baseUrlTransaction}}"], "path": ["actuator", "health"] }
+          }
+        }
+      ]
+    }
+  ]
+}
+

@@ -1,0 +1,14 @@
+package com.audit.platform.config;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class ConfigServerApplicationTest {
+
+    @Test
+    void contextLoads() {
+        // Verifies Spring Cloud Config Server context loads properly
+    }
+}
+

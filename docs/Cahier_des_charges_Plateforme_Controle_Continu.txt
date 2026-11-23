@@ -1,0 +1,379 @@
+--- PAGE 1 ---
+Cahier des charges — Plateforme de Contrôle
+Continu et d'Analyse d'Audit
+Projet académique · Microservices Spring Cloud · Version 2.0, adaptée à la grille
+d'évaluation (jalons V0 à V6)
+Auteur : [Nom et prénom] · Encadrant : [Nom] · Date : 2 novembre 2026
+1. Contexte et stratégie en deux phases
+Le projet est évalué par jalons (V0 à V6) sur un socle Spring Cloud classique. La stratégie
+retenue est donc de livrer d'abord, de façon complète et démontrable, le périmètre exigé
+par la grille (Phase 1), puis de monter le projet en niveau (Phase 2) vers une vraie
+plateforme d'audit continu.
+Le cas d'usage métier est le contrôle interne : des transactions fournisseurs sont
+enregistrées, des constats d'audit sont levés sur ces transactions, et les auditeurs sont
+notifiés par email.
+2. Objectifs de la Phase 1
+1. Concevoir et documenter une architecture microservices cohérente (V0).
+2. Implémenter des services métier en couches, avec une base de données par service
+(V1).
+3. Mettre en place Eureka, la Gateway et le Config Server (V2/V3).
+4. Faire communiquer les services de façon synchrone avec OpenFeign (V4).
+5. Mettre en place la communication asynchrone et la notification par email (V5).
+6. Rendre le système résilient, centraliser les erreurs et garantir l'idempotence des
+créations (V6).
+Phase
+Contenu
+Objectif
+Phase 1 (évaluée)
+Socle microservices : CRUD,
+Eureka, Config Server, Gateway,
+OpenFeign, RabbitMQ, résilience
+Obtenir le maximum de points à
+chaque jalon
+Phase 2 (montée
+en niveau)
+Moteur de contrôles, détection
+d'anomalies, scoring de risque,
+Kafka, Keycloak, observabilité,
+dashboards
+Transformer le projet en
+démonstrateur d'audit analytics
+Cahier des charges - Plateforme de Contrôle Continu et d'Analyse d'Audit
+Page 1 of 8
+
+
+--- PAGE 2 ---
+7. Prouver chaque jalon par une collection Postman structurée et enregistrée.
+3. Architecture cible de la Phase 1
+3.1 Références distantes
+Chaque service possède sa base. Il n'existe donc aucune clé étrangère entre bases : un
+service stocke uniquement l'identifiant d'une entité d'un autre service et vérifie son
+existence par appel OpenFeign.
+transaction.supplierId  référence un fournisseur de supplier-service.
+finding.transactionId  référence une transaction de transaction-service.
+3.2 Modèle de données
+Composant
+Port
+Rôle
+Base de
+données
+eureka-server
+8761
+Registre des services
+—
+config-server
+8888
+Configurations externalisées (dépôt
+config-repo)
+—
+api-gateway
+8080
+Point d'entrée, routage, équilibrage de
+charge, limitation de débit
+—
+supplier-service
+8081
+Gestion des fournisseurs
+supplier_db
+transaction-
+service
+8082
+Gestion des transactions (factures,
+paiements)
+transaction_db
+finding-service
+8083
+Gestion des constats d'audit
+finding_db
+notification-
+service
+8084
+Consomme les événements et envoie les
+emails
+—
+RabbitMQ
+5672
+Broker de messages
+—
+MailHog
+8025
+Serveur SMTP de test
+—
+Service
+Entité
+Attributs principaux
+supplier-service
+Supplier
+id, name, taxId, country, bankAccount, status,
+createdAt
+Cahier des charges - Plateforme de Contrôle Continu et d'Analyse d'Audit
+Page 2 of 8
+
+
+--- PAGE 3 ---
+Tous les services respectent l'architecture en couches Entity, Repository, Service,
+Controller, avec des DTO de requête et de réponse et un mapping dédié (MapStruct).
+4. Exigences par jalon
+V0 — Conception et documentation d'architecture
+Schéma d'architecture globale (services, broker, bases, flux).
+Diagramme de classes par microservice, avec la gestion explicite des références
+distantes (identifiants et DTO distants).
+Fichier README.md exhaustif : prérequis, schéma, instructions de lancement pas à
+pas, ports, ordre de démarrage, utilisation de la collection Postman.
+Critère d'acceptation : une personne extérieure lance le projet en suivant uniquement
+le README.
+V1 — Implémentation métier et modèle de données
+Architecture en couches respectée dans chaque service.
+Isolation stricte : une base de données par service, aucun accès croisé.
+Validation des requêtes entrantes (Bean Validation) et mapping DTO.
+CRUD complet et autonome pour supplier, transaction et finding.
+Preuve : collection Postman structurée (un dossier par service, un scénario par
+opération, tests automatiques sur les codes de réponse), exportée dans le dépôt.
+V2 et V3 — Services de base
+Eureka : toutes les instances s'enregistrent dynamiquement, avec un nom cohérent
+(supplier-service, transaction-service, etc.) et le statut UP.
+Gateway : routage dynamique par nom de service (lb://), avec équilibrage de charge
+démontré par deux instances de supplier-service sur des ports différents.
+Config Server : configurations externalisées dans un dépôt dédié, un fichier par
+service, effectivement chargées au démarrage, noms cohérents avec
+spring.application.name.
+Service
+Entité
+Attributs principaux
+transaction-service
+Transaction
+id, reference (unique), supplierId, amount,
+currency, type, transactionDate, createdBy, status
+finding-service
+Finding
+id, transactionId, controlCode, severity,
+description, status, createdAt
+Cahier des charges - Plateforme de Contrôle Continu et d'Analyse d'Audit
+Page 3 of 8
+
+
+--- PAGE 4 ---
+Preuve : captures du tableau de bord Eureka, requêtes Postman passant par la
+Gateway, endpoint de configuration du Config Server.
+V4 — Communication synchrone avec OpenFeign
+Clients Feign fortement typés avec DTO dédiés.
+Validation préalable des références distantes : créer une transaction vérifie que le
+fournisseur existe ; créer un constat vérifie que la transaction existe. Une référence
+inconnue renvoie une erreur 404 ou 400 claire.
+Endpoints de consultation enrichie retournant un DTO composé :
+GET /transactions/{id}/details : transaction et fournisseur.
+GET /findings/{id}/details : constat, transaction et fournisseur.
+Preuve : requêtes Postman enregistrées couvrant les cas valides et les références
+inexistantes.
+V5 — Communication asynchrone et notification
+RabbitMQ opérationnel (exchange, queue, binding, configurés dans le code).
+Publisher dans finding-service : la création d'un constat publie l'événement
+FindingCreated.
+Consumer dans notification-service : consomme l'événement et envoie un email via
+MailHog.
+Contenu de l'événement : findingId, transactionId, supplierName, severity, description,
+createdAt.
+Démonstration du cycle complet : création du constat par Postman, message visible
+dans RabbitMQ, consommation, email visible dans MailHog.
+V6 — Résilience, gestion d'erreurs et idempotence
+Circuit Breaker et Retry (Resilience4j) sur au moins deux appels Feign : transaction
+vers supplier, et finding vers transaction.
+Limitation de débit (RequestRateLimiter) configurée sur la Gateway, avec réponse 429
+démontrée.
+Gestion centralisée des erreurs avec @ControllerAdvice et un format d'erreur unique
+(code, message, horodatage, chemin).
+Idempotence des créations : en-tête Idempotency-Key ou référence métier unique ; un
+double envoi ne crée pas de doublon et renvoie la même réponse.
+Note : ce jalon figure dans la grille mais n'entre pas dans les dix éléments notés de la
+première évaluation. À confirmer avec l'encadrant, mais il est planifié dès maintenant.
+Cahier des charges - Plateforme de Contrôle Continu et d'Analyse d'Audit
+Page 4 of 8
+
+
+--- PAGE 5 ---
+5. Contrats d'API principaux
+Toutes les routes sont exposées via la Gateway sous les préfixes /api/suppliers,
+/api/transactions et /api/findings.
+6. Collection Postman
+La collection est un livrable à part entière, sauvegardée avec ses scénarios et versionnée
+dans le dépôt.
+Un dossier par jalon ou par service : V1-CRUD, V2V3-Gateway, V4-Feign, V5-Async, V6-
+Resilience.
+Des variables d'environnement (baseUrl, ids créés).
+Des tests automatiques (code de réponse, présence des champs) et un ordre
+d'exécution cohérent.
+Des scénarios d'erreur : référence inexistante, validation en échec, doublon, limite de
+débit dépassée.
+Service
+Endpoint
+Description
+supplier-
+service
+POST /suppliers · GET /suppliers · GET
+/suppliers/{id} · PUT /suppliers/{id} ·
+DELETE /suppliers/{id}
+CRUD fournisseurs
+transaction-
+service
+POST /transactions · GET
+/transactions · GET /transactions/{id} ·
+PUT · DELETE
+CRUD transactions, vérification
+du fournisseur par Feign
+transaction-
+service
+GET /transactions/{id}/details
+Transaction enrichie avec son
+fournisseur
+finding-service
+POST /findings · GET /findings · GET
+/findings/{id} · PUT · DELETE
+CRUD constats, vérification de
+la transaction, publication de
+l'événement
+finding-service
+GET /findings/{id}/details
+Constat enrichi avec
+transaction et fournisseur
+Cahier des charges - Plateforme de Contrôle Continu et d'Analyse d'Audit
+Page 5 of 8
+
+
+--- PAGE 6 ---
+7. Stack technique et outils
+8. Planning indicatif par jalon
+La durée totale est à ajuster à la date du contrôle. L'ordre, lui, ne change pas : chaque jalon
+s'appuie sur le précédent.
+Domaine
+Technologies
+Langage et framework
+Java 21, Spring Boot 3, Spring Data JPA, Bean
+Validation, MapStruct
+Spring Cloud
+Eureka, Config Server, Gateway, OpenFeign,
+Resilience4j
+Messagerie
+RabbitMQ (Spring AMQP)
+Bases de données
+PostgreSQL, une base par service (H2 acceptable
+en test)
+Limitation de débit
+Spring Cloud Gateway RequestRateLimiter avec
+Redis
+Email
+Spring Mail avec MailHog
+Tests et preuves
+Postman, JUnit 5, Mockito
+Conteneurisation
+Docker Compose (broker, bases, Redis, MailHog)
+Diagrammes
+draw.io ou PlantUML
+Gestion de projet
+Git, GitHub Projects
+Aide au développement
+Antigravity
+Ordre
+Jalon
+Durée
+indicative
+Résultat attendu
+1
+V0
+2 à 3 jours
+Schéma, diagrammes de classes, README initial
+2
+V1
+5 à 7 jours
+Trois services CRUD et collection Postman
+3
+V2/V3
+3 à 4 jours
+Eureka, Config Server, Gateway avec load
+balancing
+4
+V4
+3 à 4 jours
+Feign, validation des références, DTO agrégés
+5
+V5
+3 à 4 jours
+RabbitMQ, publisher, consumer, email
+Cahier des charges - Plateforme de Contrôle Continu et d'Analyse d'Audit
+Page 6 of 8
+
+
+--- PAGE 7 ---
+9. Auto-évaluation avant le contrôle
+Un point par élément, comme dans la grille officielle.
+10. Livrables
+Code source versionné dans un dépôt Git, un dossier par service, plus le dépôt config-
+repo.
+README.md exhaustif et schémas d'architecture.
+Diagrammes de classes par microservice.
+Collection Postman exportée et enregistrée.
+Fichier Docker Compose pour l'infrastructure (broker, bases, Redis, MailHog).
+Script ou procédure de démonstration et vidéo de secours.
+11. Hors périmètre de la Phase 1
+Ces éléments sont volontairement repoussés à la Phase 2, pour que la Phase 1 soit
+parfaitement terminée avant la montée en niveau :
+Ordre
+Jalon
+Durée
+indicative
+Résultat attendu
+6
+V6
+3 à 4 jours
+Circuit breaker, retry, rate limiting, erreurs,
+idempotence
+7
+Finalisation
+2 jours
+README final, répétition de la démonstration,
+vidéo de secours
+V0 : schéma global, diagrammes de classes par service, README exhaustif
+V1 : architecture en couches et une base de données par service
+V1 : validation et mapping DTO
+V1 : CRUD complet validé par la collection Postman
+V2/V3 : toutes les instances UP dans Eureka
+V2/V3 : routage et load balancing par la Gateway, prouvés dans Postman
+V2/V3 : configurations chargées depuis le Config Server
+V4 : clients Feign typés avec validation des références distantes
+V4 : endpoints enrichis avec DTO agrégé
+V5 : cycle complet événement, broker, consommation, email
+V6 (à confirmer) : circuit breaker et retry, rate limiting, ControllerAdvice, idempotence
+Cahier des charges - Plateforme de Contrôle Continu et d'Analyse d'Audit
+Page 7 of 8
+
+
+--- PAGE 8 ---
+Moteur de contrôles d'audit configurables (doublons, fractionnement, séparation des
+tâches, fournisseurs liés).
+Détection d'anomalies (loi de Benford, Isolation Forest) et scoring de risque.
+Passage de RabbitMQ à Kafka, Outbox pattern, Saga.
+Keycloak (OAuth2, JWT) et masquage des données personnelles.
+Journal d'audit immuable, lineage, reporting PDF, dashboards Grafana ou Power BI.
+Observabilité (Prometheus, OpenTelemetry, Zipkin), tests d'intégration avec
+Testcontainers, tests de charge, CI.
+12. Risques et mesures
+Risque
+Mesure
+Démarrage dans le désordre des
+services
+Ordre documenté dans le README : config-
+server, eureka, services, gateway
+Preuves Postman incomplètes
+Construire la collection au fur et à mesure de
+chaque jalon
+Trop de temps sur l'infrastructure
+Docker Compose uniquement pour broker,
+bases, Redis et MailHog
+Démonstration qui échoue
+Scénario répété et vidéo de secours
+Jalon V6 oublié
+Planifié dès le départ, même si sa notation reste à
+confirmer
+Cahier des charges - Plateforme de Contrôle Continu et d'Analyse d'Audit
+Page 8 of 8
+
+

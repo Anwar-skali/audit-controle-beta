@@ -1,0 +1,959 @@
+{
+  "info": {
+    "name": "Audit Platform — V1 CRUD",
+    "_postman_id": "audit-platform-v1-collection",
+    "description": "Complete V1 CRUD test suite for Plateforme de Contrôle Continu et d'Analyse d'Audit.\n\nServices:\n- supplier-service  → http://localhost:8081\n- transaction-service → http://localhost:8082\n- finding-service    → http://localhost:8083\n\nRun in order: Supplier → Transaction → Finding.\nVariables supplierId, transactionId, findingId are captured automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrlSupplier",    "value": "http://localhost:8081", "type": "string" },
+    { "key": "baseUrlTransaction", "value": "http://localhost:8082", "type": "string" },
+    { "key": "baseUrlFinding",     "value": "http://localhost:8083", "type": "string" },
+    { "key": "supplierId",         "value": "", "type": "string" },
+    { "key": "transactionId",      "value": "", "type": "string" },
+    { "key": "findingId",          "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "V1-CRUD",
+      "item": [
+        {
+          "name": "Supplier",
+          "item": [
+            {
+              "name": "01 — Create Supplier (valid)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 201 Created', function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "pm.test('Response has id', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json).to.have.property('id');",
+                      "    pm.collectionVariables.set('supplierId', json.id);",
+                      "});",
+                      "pm.test('Name matches request', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json.name).to.eql('Fournisseur Alpha');",
+                      "});",
+                      "pm.test('Status defaults to ACTIVE', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json.status).to.eql('ACTIVE');",
+                      "});",
+                      "pm.test('createdAt is present', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json.createdAt).to.not.be.null;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Fournisseur Alpha\",\n  \"taxId\": \"TAX-ALPHA-001\",\n  \"country\": \"Maroc\",\n  \"bankAccount\": \"MA12-0001-0000-1234-5678-9012\"\n}"
+                },
+                "url": { "raw": "{{baseUrlSupplier}}/api/suppliers", "host": ["{{baseUrlSupplier}}"], "path": ["api", "suppliers"] }
+              }
+            },
+            {
+              "name": "02 — Get All Suppliers",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 200 OK', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Response is an array with at least 1 item', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json).to.be.an('array');",
+                      "    pm.expect(json.length).to.be.at.least(1);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": { "raw": "{{baseUrlSupplier}}/api/suppliers", "host": ["{{baseUrlSupplier}}"], "path": ["api", "suppliers"] }
+              }
+            },
+            {
+              "name": "03 — Get Supplier by ID",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 200 OK', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('ID matches', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(String(json.id)).to.eql(pm.collectionVariables.get('supplierId'));",
+                      "});",
+                      "pm.test('taxId is correct', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json.taxId).to.eql('TAX-ALPHA-001');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrlSupplier}}/api/suppliers/{{supplierId}}",
+                  "host": ["{{baseUrlSupplier}}"],
+                  "path": ["api", "suppliers", "{{supplierId}}"]
+                }
+              }
+            },
+            {
+              "name": "04 — Update Supplier",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 200 OK', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Country updated', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json.country).to.eql('France');",
+                      "});",
+                      "pm.test('taxId unchanged', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json.taxId).to.eql('TAX-ALPHA-001');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Fournisseur Alpha\",\n  \"taxId\": \"TAX-ALPHA-001\",\n  \"country\": \"France\",\n  \"bankAccount\": \"FR76-0001-0000-1234-5678-9012\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrlSupplier}}/api/suppliers/{{supplierId}}",
+                  "host": ["{{baseUrlSupplier}}"],
+                  "path": ["api", "suppliers", "{{supplierId}}"]
+                }
+              }
+            },
+            {
+              "name": "05 — Create Duplicate Supplier (409)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 409 Conflict', function () {",
+                      "    pm.response.to.have.status(409);",
+                      "});",
+                      "pm.test('Error message present', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json).to.have.property('message');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Duplicate Supplier\",\n  \"taxId\": \"TAX-ALPHA-001\",\n  \"country\": \"Maroc\",\n  \"bankAccount\": \"MA00-0000-0000-0000-0000-0001\"\n}"
+                },
+                "url": { "raw": "{{baseUrlSupplier}}/api/suppliers", "host": ["{{baseUrlSupplier}}"], "path": ["api", "suppliers"] }
+              }
+            },
+            {
+              "name": "06 — Create Supplier with Invalid Body (400)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 400 Bad Request', function () {",
+                      "    pm.response.to.have.status(400);",
+                      "});",
+                      "pm.test('validationErrors list is present', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json).to.have.property('validationErrors');",
+                      "    pm.expect(json.validationErrors).to.be.an('array');",
+                      "    pm.expect(json.validationErrors.length).to.be.at.least(1);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"\",\n  \"taxId\": \"\"\n}"
+                },
+                "url": { "raw": "{{baseUrlSupplier}}/api/suppliers", "host": ["{{baseUrlSupplier}}"], "path": ["api", "suppliers"] }
+              }
+            },
+            {
+              "name": "07 — Get Non-Existent Supplier (404)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 404 Not Found', function () {",
+                      "    pm.response.to.have.status(404);",
+                      "});",
+                      "pm.test('Error message present', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json).to.have.property('message');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": { "raw": "{{baseUrlSupplier}}/api/suppliers/999999", "host": ["{{baseUrlSupplier}}"], "path": ["api", "suppliers", "999999"] }
+              }
+            },
+            {
+              "name": "08 — Delete Supplier",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 204 No Content', function () {",
+                      "    pm.response.to.have.status(204);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "url": {
+                  "raw": "{{baseUrlSupplier}}/api/suppliers/{{supplierId}}",
+                  "host": ["{{baseUrlSupplier}}"],
+                  "path": ["api", "suppliers", "{{supplierId}}"]
+                }
+              }
+            },
+            {
+              "name": "09 — Get Deleted Supplier (404)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 404 Not Found', function () {",
+                      "    pm.response.to.have.status(404);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrlSupplier}}/api/suppliers/{{supplierId}}",
+                  "host": ["{{baseUrlSupplier}}"],
+                  "path": ["api", "suppliers", "{{supplierId}}"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Transaction",
+          "item": [
+            {
+              "name": "01 — Seed Supplier for FK",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 201 Created', function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "var json = pm.response.json();",
+                      "pm.collectionVariables.set('supplierId', json.id);",
+                      "pm.test('supplierId captured', function () {",
+                      "    pm.expect(json.id).to.not.be.undefined;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Fournisseur Beta\",\n  \"taxId\": \"TAX-BETA-002\",\n  \"country\": \"Maroc\",\n  \"bankAccount\": \"MA12-0001-0000-9876-5432-1098\"\n}"
+                },
+                "url": { "raw": "{{baseUrlSupplier}}/api/suppliers", "host": ["{{baseUrlSupplier}}"], "path": ["api", "suppliers"] }
+              }
+            },
+            {
+              "name": "02 — Create Transaction (valid)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 201 Created', function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "pm.test('Response has id', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json).to.have.property('id');",
+                      "    pm.collectionVariables.set('transactionId', json.id);",
+                      "});",
+                      "pm.test('Reference matches', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json.reference).to.eql('TXN-2024-001');",
+                      "});",
+                      "pm.test('Status defaults to PENDING', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json.status).to.eql('PENDING');",
+                      "});",
+                      "pm.test('Amount is correct', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json.amount).to.eql(15000.00);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"TXN-2024-001\",\n  \"supplierId\": {{supplierId}},\n  \"amount\": 15000.00,\n  \"currency\": \"MAD\",\n  \"type\": \"PAYMENT\",\n  \"createdBy\": \"admin\"\n}"
+                },
+                "url": { "raw": "{{baseUrlTransaction}}/api/transactions", "host": ["{{baseUrlTransaction}}"], "path": ["api", "transactions"] }
+              }
+            },
+            {
+              "name": "03 — Get All Transactions",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 200 OK', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Response is array with at least 1 item', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json).to.be.an('array');",
+                      "    pm.expect(json.length).to.be.at.least(1);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": { "raw": "{{baseUrlTransaction}}/api/transactions", "host": ["{{baseUrlTransaction}}"], "path": ["api", "transactions"] }
+              }
+            },
+            {
+              "name": "04 — Get Transaction by ID",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 200 OK', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('ID matches', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(String(json.id)).to.eql(pm.collectionVariables.get('transactionId'));",
+                      "});",
+                      "pm.test('supplierId is set', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json.supplierId).to.not.be.null;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrlTransaction}}/api/transactions/{{transactionId}}",
+                  "host": ["{{baseUrlTransaction}}"],
+                  "path": ["api", "transactions", "{{transactionId}}"]
+                }
+              }
+            },
+            {
+              "name": "05 — Get Transactions by Supplier",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 200 OK', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('All transactions belong to supplier', function () {",
+                      "    var json = pm.response.json();",
+                      "    var sid = parseInt(pm.collectionVariables.get('supplierId'));",
+                      "    json.forEach(function(t) {",
+                      "        pm.expect(t.supplierId).to.eql(sid);",
+                      "    });",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrlTransaction}}/api/transactions?supplierId={{supplierId}}",
+                  "host": ["{{baseUrlTransaction}}"],
+                  "path": ["api", "transactions"],
+                  "query": [{ "key": "supplierId", "value": "{{supplierId}}" }]
+                }
+              }
+            },
+            {
+              "name": "06 — Update Transaction",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 200 OK', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Amount updated', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json.amount).to.eql(20000.00);",
+                      "});",
+                      "pm.test('Status updated to VALIDATED', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json.status).to.eql('VALIDATED');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"TXN-2024-001\",\n  \"supplierId\": {{supplierId}},\n  \"amount\": 20000.00,\n  \"currency\": \"MAD\",\n  \"type\": \"PAYMENT\",\n  \"createdBy\": \"admin\",\n  \"status\": \"VALIDATED\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrlTransaction}}/api/transactions/{{transactionId}}",
+                  "host": ["{{baseUrlTransaction}}"],
+                  "path": ["api", "transactions", "{{transactionId}}"]
+                }
+              }
+            },
+            {
+              "name": "07 — Create Duplicate Transaction (409)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 409 Conflict', function () {",
+                      "    pm.response.to.have.status(409);",
+                      "});",
+                      "pm.test('Error message present', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json).to.have.property('message');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"TXN-2024-001\",\n  \"supplierId\": {{supplierId}},\n  \"amount\": 999.99,\n  \"currency\": \"EUR\",\n  \"type\": \"REFUND\",\n  \"createdBy\": \"admin\"\n}"
+                },
+                "url": { "raw": "{{baseUrlTransaction}}/api/transactions", "host": ["{{baseUrlTransaction}}"], "path": ["api", "transactions"] }
+              }
+            },
+            {
+              "name": "08 — Create Transaction with Invalid Body (400)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 400 Bad Request', function () {",
+                      "    pm.response.to.have.status(400);",
+                      "});",
+                      "pm.test('validationErrors list is present', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json).to.have.property('validationErrors');",
+                      "    pm.expect(json.validationErrors.length).to.be.at.least(1);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"\",\n  \"amount\": -100\n}"
+                },
+                "url": { "raw": "{{baseUrlTransaction}}/api/transactions", "host": ["{{baseUrlTransaction}}"], "path": ["api", "transactions"] }
+              }
+            },
+            {
+              "name": "09 — Get Non-Existent Transaction (404)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 404 Not Found', function () {",
+                      "    pm.response.to.have.status(404);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": { "raw": "{{baseUrlTransaction}}/api/transactions/999999", "host": ["{{baseUrlTransaction}}"], "path": ["api", "transactions", "999999"] }
+              }
+            },
+            {
+              "name": "10 — Delete Transaction",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 204 No Content', function () {",
+                      "    pm.response.to.have.status(204);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "url": {
+                  "raw": "{{baseUrlTransaction}}/api/transactions/{{transactionId}}",
+                  "host": ["{{baseUrlTransaction}}"],
+                  "path": ["api", "transactions", "{{transactionId}}"]
+                }
+              }
+            },
+            {
+              "name": "11 — Get Deleted Transaction (404)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 404 Not Found', function () {",
+                      "    pm.response.to.have.status(404);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrlTransaction}}/api/transactions/{{transactionId}}",
+                  "host": ["{{baseUrlTransaction}}"],
+                  "path": ["api", "transactions", "{{transactionId}}"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Finding",
+          "item": [
+            {
+              "name": "01 — Seed Transaction for FK",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 201 Created', function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "var json = pm.response.json();",
+                      "pm.collectionVariables.set('transactionId', json.id);",
+                      "pm.test('transactionId captured', function () {",
+                      "    pm.expect(json.id).to.not.be.undefined;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"TXN-2024-002\",\n  \"supplierId\": {{supplierId}},\n  \"amount\": 5000.00,\n  \"currency\": \"EUR\",\n  \"type\": \"INVOICE\",\n  \"createdBy\": \"auditor\"\n}"
+                },
+                "url": { "raw": "{{baseUrlTransaction}}/api/transactions", "host": ["{{baseUrlTransaction}}"], "path": ["api", "transactions"] }
+              }
+            },
+            {
+              "name": "02 — Create Finding (valid)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 201 Created', function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "pm.test('Response has id', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json).to.have.property('id');",
+                      "    pm.collectionVariables.set('findingId', json.id);",
+                      "});",
+                      "pm.test('controlCode matches', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json.controlCode).to.eql('CTRL-AML-001');",
+                      "});",
+                      "pm.test('Status defaults to OPEN', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json.status).to.eql('OPEN');",
+                      "});",
+                      "pm.test('severity is HIGH', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json.severity).to.eql('HIGH');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"transactionId\": {{transactionId}},\n  \"controlCode\": \"CTRL-AML-001\",\n  \"severity\": \"HIGH\",\n  \"description\": \"Montant anormal détecté lors du contrôle AML.\"\n}"
+                },
+                "url": { "raw": "{{baseUrlFinding}}/api/findings", "host": ["{{baseUrlFinding}}"], "path": ["api", "findings"] }
+              }
+            },
+            {
+              "name": "03 — Get All Findings",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 200 OK', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Response is array with at least 1 item', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json).to.be.an('array');",
+                      "    pm.expect(json.length).to.be.at.least(1);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": { "raw": "{{baseUrlFinding}}/api/findings", "host": ["{{baseUrlFinding}}"], "path": ["api", "findings"] }
+              }
+            },
+            {
+              "name": "04 — Get Finding by ID",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 200 OK', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('ID matches', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(String(json.id)).to.eql(pm.collectionVariables.get('findingId'));",
+                      "});",
+                      "pm.test('transactionId is set', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json.transactionId).to.not.be.null;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrlFinding}}/api/findings/{{findingId}}",
+                  "host": ["{{baseUrlFinding}}"],
+                  "path": ["api", "findings", "{{findingId}}"]
+                }
+              }
+            },
+            {
+              "name": "05 — Get Findings by Transaction",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 200 OK', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('All findings belong to transaction', function () {",
+                      "    var json = pm.response.json();",
+                      "    var tid = parseInt(pm.collectionVariables.get('transactionId'));",
+                      "    json.forEach(function(f) {",
+                      "        pm.expect(f.transactionId).to.eql(tid);",
+                      "    });",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrlFinding}}/api/findings?transactionId={{transactionId}}",
+                  "host": ["{{baseUrlFinding}}"],
+                  "path": ["api", "findings"],
+                  "query": [{ "key": "transactionId", "value": "{{transactionId}}" }]
+                }
+              }
+            },
+            {
+              "name": "06 — Get Findings by Severity",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 200 OK', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('All findings have HIGH severity', function () {",
+                      "    var json = pm.response.json();",
+                      "    json.forEach(function(f) {",
+                      "        pm.expect(f.severity).to.eql('HIGH');",
+                      "    });",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrlFinding}}/api/findings?severity=HIGH",
+                  "host": ["{{baseUrlFinding}}"],
+                  "path": ["api", "findings"],
+                  "query": [{ "key": "severity", "value": "HIGH" }]
+                }
+              }
+            },
+            {
+              "name": "07 — Update Finding",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 200 OK', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Status updated to RESOLVED', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json.status).to.eql('RESOLVED');",
+                      "});",
+                      "pm.test('severity unchanged', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json.severity).to.eql('HIGH');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"transactionId\": {{transactionId}},\n  \"controlCode\": \"CTRL-AML-001\",\n  \"severity\": \"HIGH\",\n  \"description\": \"Anomalie confirmée et corrigée.\",\n  \"status\": \"RESOLVED\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrlFinding}}/api/findings/{{findingId}}",
+                  "host": ["{{baseUrlFinding}}"],
+                  "path": ["api", "findings", "{{findingId}}"]
+                }
+              }
+            },
+            {
+              "name": "08 — Create Finding with Invalid Body (400)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 400 Bad Request', function () {",
+                      "    pm.response.to.have.status(400);",
+                      "});",
+                      "pm.test('validationErrors list is present', function () {",
+                      "    var json = pm.response.json();",
+                      "    pm.expect(json).to.have.property('validationErrors');",
+                      "    pm.expect(json.validationErrors.length).to.be.at.least(1);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"controlCode\": \"\",\n  \"severity\": \"INVALID_SEVERITY\"\n}"
+                },
+                "url": { "raw": "{{baseUrlFinding}}/api/findings", "host": ["{{baseUrlFinding}}"], "path": ["api", "findings"] }
+              }
+            },
+            {
+              "name": "09 — Get Non-Existent Finding (404)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 404 Not Found', function () {",
+                      "    pm.response.to.have.status(404);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": { "raw": "{{baseUrlFinding}}/api/findings/999999", "host": ["{{baseUrlFinding}}"], "path": ["api", "findings", "999999"] }
+              }
+            },
+            {
+              "name": "10 — Delete Finding",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 204 No Content', function () {",
+                      "    pm.response.to.have.status(204);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "url": {
+                  "raw": "{{baseUrlFinding}}/api/findings/{{findingId}}",
+                  "host": ["{{baseUrlFinding}}"],
+                  "path": ["api", "findings", "{{findingId}}"]
+                }
+              }
+            },
+            {
+              "name": "11 — Get Deleted Finding (404)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status is 404 Not Found', function () {",
+                      "    pm.response.to.have.status(404);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrlFinding}}/api/findings/{{findingId}}",
+                  "host": ["{{baseUrlFinding}}"],
+                  "path": ["api", "findings", "{{findingId}}"]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
